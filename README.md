@@ -56,3 +56,23 @@ A second experiment was performed by applying Gaussian blur separately to the ch
 Blurring the chrominance channels produced only minor visual changes, while blurring the luma channel caused a noticeable loss of sharpness and texture.
 
 **Conclusion:** JPEG and many video codecs use chroma subsampling because human vision is more sensitive to spatial detail in luminance than in chrominance. This allows the amount of color information to be reduced while preserving most of the perceived image quality.
+
+### Exercise 4 – Image Resizing with FFmpeg
+
+The original image (640 × 360 pixels) was resized using FFmpeg to three different resolutions: 320 × 180, 160 × 90 and 80 × 45.
+
+A Python class called ImageResizer was implemented using the subprocess module to automate the resizing process.
+
+Three scaling algorithms were compared: nearest neighbor, bilinear and bicubic.
+
+Results:
+
+Nearest neighbor: Produced more visible pixelation and irregular edges.
+
+Bilinear: Generated smoother transitions, but some details appeared less defined.
+
+Bicubic: Provided a good balance between smoothness and edge definition.
+
+FFmpeg's libswscale normally uses bicubic interpolation by default when no alternative scaling algorithm is specified.
+
+Conclusion: Reducing the image resolution decreases the amount of spatial information. The interpolation algorithm influences the visual appearance of the resized image, particularly edge sharpness, smoothness and aliasing artifacts.

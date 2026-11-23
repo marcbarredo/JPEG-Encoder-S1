@@ -3,6 +3,9 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+import subprocess
+from pathlib import Path
+
 ##EXERCISE 1##
 class ColorTranslator:
     """
@@ -52,7 +55,51 @@ class ColorTranslator:
 
         return r, g, b
 
+class ImageResizer:
+    """
+    A class to resize images using FFmpeg through Python subprocess.
+    """
 
+    def __init__(self, input_path):
+        # Store the path of the original image
+        self.input_path = str(input_path)
+
+    def resize(self, width, height, output_path, algorithm=None):
+        """
+        Resize an image using FFmpeg.
+
+        Args:
+            width: Target image width in pixels.
+            height: Target image height in pixels.
+            output_path: Path where the resized image will be saved.
+            algorithm: Optional scaling algorithm (e.g. bilinear, bicubic).
+
+        Returns:
+            None.
+        """
+
+        # Build the FFmpeg command
+        command = [
+            "ffmpeg",
+            "-y",
+            "-i", self.input_path,
+        ]
+
+        # Select a scaling algorithm if specified
+        if algorithm is not None:
+            command.extend(["-sws_flags", algorithm])
+
+        # Set the target resolution
+        command.extend([
+            "-vf", f"scale={width}:{height}",
+            output_path
+        ])
+
+        # Execute FFmpeg and raise an error if it fails
+        subprocess.run(command, check=True)
+
+        # Confirm that the output was generated
+        print(f"Image saved: {output_path}")
 
 
 def compare_luma_chroma_blur(image_path):
@@ -118,8 +165,9 @@ def compare_luma_chroma_blur(image_path):
 # Run the experiment
 compare_luma_chroma_blur("images/original.png")
 
-
 if __name__ == "__main__":
+
+    # EXERCISE 2: RGB to YUV conversion
 
     # Create an instance of the ColorTranslator class
     translator = ColorTranslator()
@@ -146,3 +194,35 @@ if __name__ == "__main__":
 
     # Check whether the original RGB values were recovered
     print("Exact reconstruction:", rgb_original == rgb_rounded)
+
+    # EXERCISE 4: Resize images with FFmpeg
+
+    # Create an instance of the ImageResizer class
+    resizer = ImageResizer("images/original.png")
+
+    # Define the target resolutions
+    resolutions = [
+        (320, 180, "half"),
+        (160, 90, "quarter"),
+        (80, 45, "eighth")
+    ]
+
+    # Generate resized images automatically
+    for width, height, name in resolutions:
+        resizer.resize(
+            width,
+            height,
+            f"images/python_resized_{name}.png"
+        )
+
+    # Compare different scaling algorithms
+    algorithms = ["neighbor", "bilinear", "bicubic"]
+
+    # Resize the image using each scaling algorithm
+    for algorithm in algorithms:
+        resizer.resize(
+            80,
+            45,
+            f"images/resize_{algorithm}.png",
+            algorithm=algorithm
+        )
