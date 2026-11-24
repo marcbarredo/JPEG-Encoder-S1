@@ -76,3 +76,13 @@ Bicubic: Provided a good balance between smoothness and edge definition.
 FFmpeg's libswscale normally uses bicubic interpolation by default when no alternative scaling algorithm is specified.
 
 Conclusion: Reducing the image resolution decreases the amount of spatial information. The interpolation algorithm influences the visual appearance of the resized image, particularly edge sharpness, smoothness and aliasing artifacts.
+
+### Exercise 5 – Zigzag Scanning
+
+A `ZigzagEncoder` class was implemented to convert an 8×8 matrix into a sequence of 64 values following the JPEG zigzag scanning pattern.
+
+The class includes two methods: `zigzag()` and `inverse_zigzag()`.
+
+The implementation was tested using an 8×8 matrix containing values from 0 to 63. The inverse operation successfully reconstructed the original matrix without information loss.
+
+**Conclusion:** Zigzag scanning orders DCT coefficients approximately from low to high spatial frequencies. After quantization, this arrangement tends to group zero-valued coefficients toward the end of the sequence, improving the efficiency of subsequent run-length encoding.

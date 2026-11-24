@@ -161,11 +161,87 @@ def compare_luma_chroma_blur(image_path):
         cv2.cvtColor(luma_rgb, cv2.COLOR_RGB2BGR)
     )
 
+class ZigzagEncoder:
+    """
+    A class to convert an 8x8 matrix into a zigzag sequence
+    and reconstruct the original matrix.
+    """
 
-# Run the experiment
-compare_luma_chroma_blur("images/original.png")
+    def zigzag(self, matrix):
+        """
+        Convert an 8x8 matrix into a list of 64 values
+        following the JPEG zigzag scanning order.
+        """
+
+        # Check that the input matrix has the correct dimensions
+        if len(matrix) != 8 or any(len(row) != 8 for row in matrix):
+            raise ValueError("Input matrix must be 8x8")
+
+        result = []
+
+        # There are 15 diagonals in an 8x8 matrix
+        for diagonal in range(15):
+
+            # Find the coordinates belonging to each diagonal
+            positions = []
+
+            for row in range(8):
+                col = diagonal - row
+
+                if 0 <= col < 8:
+                    positions.append((row, col))
+
+            # Reverse every even diagonal to create the zigzag pattern
+            if diagonal % 2 == 0:
+                positions.reverse()
+
+            # Extract the matrix values in zigzag order
+            for row, col in positions:
+                result.append(matrix[row][col])
+
+        return result
+
+    def inverse_zigzag(self, sequence):
+        """
+        Reconstruct an 8x8 matrix from a zigzag sequence
+        containing 64 values.
+        """
+
+        # Validate the sequence length
+        if len(sequence) != 64:
+            raise ValueError("Input sequence must contain 64 values")
+
+        # Create an empty 8x8 matrix
+        matrix = [[0 for _ in range(8)] for _ in range(8)]
+
+        index = 0
+
+        # Visit the diagonals in the same order as the encoder
+        for diagonal in range(15):
+
+            positions = []
+
+            for row in range(8):
+                col = diagonal - row
+
+                if 0 <= col < 8:
+                    positions.append((row, col))
+
+            if diagonal % 2 == 0:
+                positions.reverse()
+
+            # Place each value back into its original position
+            for row, col in positions:
+                matrix[row][col] = sequence[index]
+                index += 1
+
+        return matrix
+
 
 if __name__ == "__main__":
+
+    # EXERCISE 3: Luma vs chroma blur
+    compare_luma_chroma_blur("images/original.png")
 
     # EXERCISE 2: RGB to YUV conversion
 
@@ -226,3 +302,36 @@ if __name__ == "__main__":
             f"images/resize_{algorithm}.png",
             algorithm=algorithm
         )
+
+    # EXERCISE 5: Zigzag scanning
+
+    # Create an instance of the ZigzagEncoder class
+    zigzag_encoder = ZigzagEncoder()
+
+    # Create an example 8x8 matrix
+    original_matrix = [
+        [row * 8 + col for col in range(8)]
+        for row in range(8)
+    ]
+
+    # Convert the matrix into a zigzag sequence
+    zigzag_sequence = zigzag_encoder.zigzag(original_matrix)
+
+    # Reconstruct the original matrix
+    recovered_matrix = zigzag_encoder.inverse_zigzag(zigzag_sequence)
+
+    # Display the results
+    print("\nOriginal matrix:")
+    for row in original_matrix:
+        print(row)
+
+    print("\nZigzag sequence:")
+    print(zigzag_sequence)
+
+    print("\nRecovered matrix:")
+    for row in recovered_matrix:
+        print(row)
+
+    # Check whether the original matrix was recovered
+    print("\nExact reconstruction:",
+          original_matrix == recovered_matrix)
