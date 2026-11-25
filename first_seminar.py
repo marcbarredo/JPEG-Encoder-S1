@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import subprocess
+from scipy.fft import dctn
 from pathlib import Path
 
 ##EXERCISE 1##
@@ -237,6 +238,108 @@ class ZigzagEncoder:
 
         return matrix
 
+# EXERCISE 6: DCT + quantization
+class DCTCodec:
+    """8x8 DCT-II (done by hand with a matrix) and JPEG quantization."""
+
+    def __init__(self):
+        # Standard JPEG luminance table (we copy it from https://en.wikipedia.org/wiki/JPEG)
+        self.q_table = np.array([
+            [16, 11, 10, 16, 24, 40, 51, 61],
+            [12, 12, 14, 19, 26, 58, 60, 55],
+            [14, 13, 16, 24, 40, 57, 69, 56],
+            [14, 17, 22, 29, 51, 87, 80, 62],
+            [18, 22, 37, 56, 68, 109, 103, 77],
+            [24, 35, 55, 64, 81, 104, 113, 92],
+            [49, 64, 78, 87, 103, 121, 120, 101],
+            [72, 92, 95, 98, 112, 100, 103, 99],
+        ])
+
+        # DCT matrix: C[k][n] = a(k) * cos((2n+1) * k * pi / 16)
+        # a(0) = sqrt(1/8) and a(k) = sqrt(2/8) for the rest
+        self.C = np.zeros((8, 8))
+        for k in range(8):
+            a = np.sqrt(1 / 8) if k == 0 else np.sqrt(2 / 8)
+            for n in range(8):
+                self.C[k][n] = a * np.cos((2 * n + 1) * k * np.pi / 16)
+
+    def encode(self, block):
+        # Subtract 128 to center the pixels around 0, then C * block * C^T
+        block = np.array(block, dtype=float) - 128
+        return self.C @ block @ self.C.T
+
+    def decode(self, coefs):
+        # Inverse: C^T * coefs * C, then add the 128 back
+        return self.C.T @ coefs @ self.C + 128
+
+    def get_table(self, quality):
+        # libjpeg formula to go from quality (1-100) to a table
+        quality = min(max(quality, 1), 100)
+        if quality < 50:
+            scale = 5000 / quality
+        else:
+            scale = 200 - 2 * quality
+        table = np.floor((self.q_table * scale + 50) / 100)
+        # never below 1 (division by 0) or above 255
+        return np.clip(table, 1, 255)
+
+    def quantize(self, coefs, quality):
+        # This is where information is lost: divide and round
+        return np.round(coefs / self.get_table(quality)).astype(int)
+
+    def dequantize(self, quantized, quality):
+        return quantized * self.get_table(quality)
+
+
+def show_quantization(image_path):
+    """Pass one 8x8 block through the DCT with different qualities."""
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    # Block with quite a lot of detail (row 8, column 168)
+    block = image[8:16, 168:176]
+
+    codec = DCTCodec()
+    coefs = codec.encode(block)
+
+    # Without quantizing we must get the original block back
+    print("Round trip without quantizing:", np.allclose(codec.decode(coefs), block))
+
+    qualities = [90, 50, 10]
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+
+    for ax, quality in zip(axes, qualities):
+        quantized = codec.quantize(coefs, quality)
+        recovered = np.clip(codec.decode(codec.dequantize(quantized, quality)), 0, 255)
+
+        zeros = int(np.sum(quantized == 0))
+        # zeros only in the bottom right corner (high frequencies)
+        zeros_hf = int(np.sum(quantized[4:, 4:] == 0))
+        error = np.mean(np.abs(recovered - block))
+
+        print(f"\nQuality {quality}: {zeros}/64 zeros "
+              f"({zeros_hf}/16 in the bottom right), mean error {error:.2f}")
+        print(quantized)
+
+        # white = coefficient that survives, black = zero
+        ax.imshow(quantized != 0, cmap="gray")
+        ax.set_title(f"Quality {quality} ({64 - zeros} non-zero)")
+
+    plt.tight_layout()
+    plt.savefig("screenshots/ex6_quantization.png")
+    plt.close()
+
+
+def check_dct_with_scipy(image_path):
+    """Check that my DCT gives the same as scipy."""
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    block = image[8:16, 168:176].astype(float)
+
+    codec = DCTCodec()
+    mine = codec.encode(block)
+    scipy_result = dctn(block - 128, type=2, norm="ortho")
+    print("\nSame as scipy:", np.allclose(mine, scipy_result))
+
+
 
 if __name__ == "__main__":
 
@@ -335,3 +438,7 @@ if __name__ == "__main__":
     # Check whether the original matrix was recovered
     print("\nExact reconstruction:",
           original_matrix == recovered_matrix)
+
+    # EXERCISE 6: DCT + quantization
+    show_quantization("images/original.png")
+    check_dct_with_scipy("images/original.png")

@@ -86,3 +86,19 @@ The class includes two methods: `zigzag()` and `inverse_zigzag()`.
 The implementation was tested using an 8×8 matrix containing values from 0 to 63. The inverse operation successfully reconstructed the original matrix without information loss.
 
 **Conclusion:** Zigzag scanning orders DCT coefficients approximately from low to high spatial frequencies. After quantization, this arrangement tends to group zero-valued coefficients toward the end of the sequence, improving the efficiency of subsequent run-length encoding.
+
+### Exercise 6 - DCT + quantization
+
+The DCT transforms the 8x8 block of pixels into frequencies. The top-left corner represents average brightness and low frequencies, while the bottom-right corner represents fine details. 
+We wrote the DCT by hand using matrix C and verified that it matches scipy.
+
+Quantization is the only step that loses information: dividing by the table and rounding. The table has larger numbers at high frequencies, which the eye notices less.
+
+The result table:
+| Quality | Zeros (out of 64) | High-frequency zeros (out of 16) | Mean error |
+|---|---:|---:|---:|
+| 90 | 28 | 12 | 2.5 |
+| 50 | 49 | 16 | 6.26 |
+| 10 | 54 | 16 | 12.38 |
+
+**Conclusion:** As the quality decreases, the high-frequency coefficients drop to zero (almost all of them at quality 50), which is why zigzag and RLE compress so well afterward. In return, the error increases. We can see it on the screenshot ex6_quantization.png
